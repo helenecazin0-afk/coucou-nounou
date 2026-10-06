@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#d9b7e8">
+<title>Coucou Nounou 🧸</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#fff4f8,#f2ecff);color:#55495e}
+.app{max-width:480px;margin:auto;min-height:100vh;padding-bottom:30px}
+header{padding:24px 18px 20px;text-align:center;background:linear-gradient(135deg,#e9c8e8,#cdb8ed);color:white;border-radius:0 0 28px 28px}
+.logo{font-size:42px}
+h1{margin:4px 0;font-size:27px}
+.subtitle{margin:0;font-size:14px}
+nav{display:flex;gap:7px;padding:12px;overflow:auto}
+nav button{border:0;border-radius:14px;padding:10px 12px;background:white;color:#705875;font-weight:bold;white-space:nowrap}
+main{padding:0 12px}
+.card{background:white;border-radius:22px;padding:17px;margin:12px 0;box-shadow:0 8px 24px rgba(100,70,110,.10)}
+h2{font-size:20px;margin:0 0 8px}
+p{line-height:1.45}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+button.action{border:0;border-radius:17px;padding:15px 8px;background:#faf0f8;font-size:15px;color:#5d4c62;font-weight:bold}
+.primary{width:100%;border:0;border-radius:16px;padding:13px;background:#d9b7e8;color:white;font-weight:bold;font-size:15px}
+input,textarea{width:100%;padding:12px;border:1px solid #eadbea;border-radius:13px;margin:5px 0 10px;font:inherit}
+.status{padding:12px;border-radius:14px;background:#f8eef8;margin-top:10px;font-size:14px}
+.event{padding:11px 0;border-bottom:1px solid #f0e8f1}
+.small{font-size:13px;color:#817483}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">🧸</div>
+  <h1>Coucou Nounou</h1>
+  <p class="subtitle">La petite journée de bébé 💕</p>
+</header>
+
+<nav>
+  <button onclick="show('home')">🏠 Accueil</button>
+  <button onclick="show('journal')">📖 Journal</button>
+  <button onclick="show('parents')">💌 Parents</button>
+  <button onclick="show('online')">☁️ En ligne</button>
+</nav>
+
+<main id="main"></main>
+</div>
+
+<script>
+const KEY='coucou_nounou_v21_data';
+let data=JSON.parse(localStorage.getItem(KEY)||'{"child":"Mon petit bout","events":[]}');
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data));}
+
+function show(page){
+  const m=document.getElementById('main');
+
+  if(page==='home'){
+    m.innerHTML=`
+      <section class="card">
+        <h2>🧸 Bonjour Nounou 💕</h2>
+        <p>Bienvenue dans ton petit espace pour suivre la journée de bébé.</p>
+        <p><b>👶 ${escapeHtml(data.child)}</b></p>
+      </section>
+      <section class="card">
+        <h2>✨ Ajouter un petit moment</h2>
+        <div class="actions">
+          <button class="action" onclick="add('🍼','Biberon')">🍼 Biberon</button>
+          <button class="action" onclick="add('🍽️','Repas')">🍽️ Repas</button>
+          <button class="action" onclick="add('🧷','Couche')">🧷 Couche</button>
+          <button class="action" onclick="add('😴','Sieste')">😴 Sieste</button>
+          <button class="action" onclick="add('📸','Photo')">📸 Photo</button>
+          <button class="action" onclick="add('📝','Note')">📝 Note</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>👶 Mon enfant</h2>
+        <input id="childName" value="${escapeAttr(data.child)}" placeholder="Prénom de l'enfant">
+        <button class="primary" onclick="changeChild()">💾 Enregistrer</button>
+      </section>`;
+  }
+
+  if(page==='journal'){
+    const events=data.events.slice().reverse();
+    m.innerHTML=`
+      <section class="card">
+        <h2>📖 Journal de ${escapeHtml(data.child)}</h2>
+        ${events.length ? events.map(e=>`<div class="event">${e.icon} <b>${escapeHtml(e.label)}</b><br><span class="small">${escapeHtml(e.detail)} · ${escapeHtml(e.time)}</span></div>`).join('') : '<p>Aucun moment enregistré pour le moment 🥰</p>'}
+      </section>`;
+  }
+
+  if(page==='parents'){
+    const c={};
+    data.events.forEach(e=>c[e.label]=(c[e.label]||0)+1);
+    m.innerHTML=`
+      <section class="card">
+        <h2>💌 Espace Parents</h2>
+        <p>Résumé de la journée de <b>${escapeHtml(data.child)}</b>.</p>
+        <p>🍼 ${c.Biberon||0} · 🍽️ ${c.Repas||0} · 🧷 ${c.Couche||0} · 😴 ${c.Sieste||0}</p>
+        <div class="status">🔐 La connexion privée avec les parents sera branchée ensuite.</div>
+      </section>`;
+  }
+
+  if(page==='online'){
+    m.innerHTML=`
+      <section class="card">
+        <h2>☁️ Mon espace en ligne 🧸</h2>
+        <p>Cette V21 sert d'abord à vérifier que l'application s'ouvre correctement.</p>
+        <div id="onlineStatus" class="status">✅ L'application fonctionne.</div>
+        <button class="primary" style="margin-top:10px" onclick="testOnline()">✨ Vérifier</button>
+      </section>`;
+  }
+}
+
+function add(icon,label){
+  let detail=prompt('Petite précision (facultatif) :','');
+  if(detail===null) detail='';
+  data.events.push({icon,label,detail,time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})});
+  save(); show('home');
+  alert('🧸 C’est bien enregistré !');
+}
+
+function changeChild(){
+  const v=document.getElementById('childName').value.trim();
+  if(v){data.child=v;save();show('home');}
+}
+
+function testOnline(){
+  document.getElementById('onlineStatus').textContent='🎉 Tout fonctionne ! On pourra maintenant connecter Supabase étape par étape. 🧸💕';
+}
+
+function escapeHtml(v){
+  return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});
+}
+function escapeAttr(v){return escapeHtml(v);}
+
+show('home');
+</script>
+
+
+
+<script>
+(function(){
+  const CFG='coucou_nounou_supabase_config';
+  const SESSION='coucou_nounou_session';
+  const DATA='coucou_nounou_v21_data';
+  const getCfg=()=>{try{return JSON.parse(localStorage.getItem(CFG)||'null')}catch(e){return null}};
+  const getData=()=>{try{return JSON.parse(localStorage.getItem(DATA)||'{"child":"Mon petit bout","events":[]}')}catch(e){return {child:'Mon petit bout',events:[]}}};
+  const saveData=d=>localStorage.setItem(DATA,JSON.stringify(d));
+  const getSession=()=>{try{return JSON.parse(sessionStorage.getItem(SESSION)||'null')}catch(e){return null}};
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+
+  async function api(path, opts={}){
+    const c=getCfg(); if(!c?.url||!c?.key) throw new Error('CONFIG');
+    const s=getSession();
+    const headers=Object.assign({'apikey':c.key,'Content-Type':'application/json'}, opts.headers||{});
+    if(s?.access_token) headers.Authorization='Bearer '+s.access_token;
+    const r=await fetch(c.url+path,Object.assign({},opts,{headers}));
+    const text=await r.text();
+    let body=null; try{body=text?JSON.parse(text):null}catch(e){body=text}
+    if(!r.ok){const msg=body?.msg||body?.message||body?.error_description||body?.hint||('Erreur '+r.status); throw new Error(msg)}
+    return body;
+  }
+
+  function onlineUI(){
+    const m=document.getElementById('main'); if(!m) return;
+    const c=getCfg()||{}; const s=getSession();
+    if(!c?.url||!c?.key){
+      m.innerHTML=`<section class="card"><h2>☁️ Connexion en ligne</h2><p>La connexion Supabase n'est pas encore configurée sur ce téléphone.</p><p class="status">Retourne dans l'ancienne étape de connexion pour enregistrer ton Project URL et ta Publishable key.</p></section>`; return;
+    }
+    if(s?.access_token){
+      m.innerHTML=`<section class="card"><h2>☁️ Nounou connectée 🧸</h2><p class="status" id="syncStatus">⏳ Vérification de ton espace…</p><button class="primary" onclick="syncNow()">🔄 Synchroniser ma journée</button><button class="primary" style="margin-top:10px;background:#f5e7f3;color:#684f68" onclick="logoutCN()">Se déconnecter</button></section>`;
+      setTimeout(syncNow,50); return;
+    }
+    m.innerHTML=`<section class="card"><h2>☁️ Se connecter</h2><p>Utilise le compte Nounou créé dans Supabase.</p><label>Adresse e-mail</label><input id="cn-email" type="email" autocomplete="username" placeholder="ton e-mail"><label>Mot de passe</label><input id="cn-password" type="password" autocomplete="current-password" placeholder="ton mot de passe"><button class="primary" onclick="loginCN()">🔐 Se connecter</button><div id="loginStatus" class="status">Tes identifiants restent dans ton navigateur et ne sont pas envoyés à Coucou Nounou : ils servent uniquement à l'authentification Supabase.</div></section>`;
+  }
+
+  async function loginCN(){
+    const email=document.getElementById('cn-email').value.trim(); const password=document.getElementById('cn-password').value; const st=document.getElementById('loginStatus');
+    if(!email||!password){st.textContent='⚠️ Renseigne ton e-mail et ton mot de passe.';return}
+    st.textContent='⏳ Connexion…';
+    try{
+      const c=getCfg();
+      const r=await fetch(c.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':c.key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const body=await r.json();
+      if(!r.ok) throw new Error(body.error_description||body.msg||'Identifiants incorrects.');
+      sessionStorage.setItem(SESSION,JSON.stringify({access_token:body.access_token,user:body.user}));
+      onlineUI();
+    }catch(e){st.textContent='❌ '+e.message}
+  }
+  window.loginCN=loginCN;
+
+  async function ensureChild(){
+    const s=getSession(); const d=getData();
+    let rows=await api('/rest/v1/children?select=id,first_name&nounou_id=eq.'+encodeURIComponent(s.user.id)+'&order=created_at.asc&limit=1');
+    if(rows?.length) return rows[0];
+    const created=await api('/rest/v1/children',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({nounou_id:s.user.id,first_name:d.child||'Mon petit bout'})});
+    return created[0];
+  }
+
+  async function syncNow(){
+    const st=document.getElementById('syncStatus'); if(st) st.textContent='⏳ Synchronisation en cours…';
+    try{
+      const s=getSession(); if(!s) throw new Error('SESSION');
+      const child=await ensureChild();
+      const d=getData();
+      d.remoteChildId=child.id; d.child=child.first_name||d.child;
+      for(const e of d.events){
+        if(e.remoteId) continue;
+        const created=await api('/rest/v1/daily_events',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({child_id:child.id,event_type:e.label,event_value:e.detail||null,event_time:new Date().toISOString()})});
+        e.remoteId=created[0]?.id||true;
+      }
+      saveData(d);
+      if(st) st.innerHTML='✅ <b>Synchronisation réussie !</b><br>Ton enfant et ses moments sont maintenant enregistrés dans Supabase. 🧸💕';
+    }catch(e){
+      if(st) st.innerHTML='❌ '+(e.message==='CONFIG'?'Connexion Supabase non configurée.':e.message==='SESSION'?'Il faut te reconnecter.':'La synchronisation a rencontré un problème : '+e.message);
+    }
+  }
+  window.syncNow=syncNow;
+
+  function logoutCN(){sessionStorage.removeItem(SESSION); onlineUI()}
+  window.logoutCN=logoutCN;
+
+  // Keep existing local actions, but sync a new event immediately when connected.
+  const oldAdd=window.add;
+  window.add=async function(icon,label){
+    let detail=prompt('Petite précision (facultatif) :',''); if(detail===null) detail='';
+    const d=getData(); const e={icon,label,detail,time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};
+    d.events.push(e); saveData(d); show('home'); alert('🧸 C’est bien enregistré !');
+    if(getSession()){
+      try{const child=await ensureChild(); const created=await api('/rest/v1/daily_events',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({child_id:child.id,event_type:label,event_value:detail||null,event_time:new Date().toISOString()})}); e.remoteId=created[0]?.id||true; saveData(d)}catch(err){console.warn(err)}
+    }
+  };
+
+  // Replace the online page after the original app has loaded it.
+  const oldShow=window.show;
+  window.show=function(page){ oldShow(page); if(page==='online') onlineUI(); };
+  setTimeout(()=>{ if(typeof window.show==='function') window.show('home'); },0);
+})();
+</script>
+</body>
+</html>
